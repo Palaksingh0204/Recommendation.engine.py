@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recommendation Engine — Live Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --bg:#0f1420;
+    --panel:#161d2e;
+    --panel-2:#1d2740;
+    --line:#2a3450;
+    --text:#e7ebf5;
+    --muted:#8a93ac;
+    --accent:#5ee6c4;
+    --accent-2:#f2b45c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    padding:40px 20px 80px;
+  }
+  .wrap{max-width:840px;margin:0 auto;}
+  .eyebrow{
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin-bottom:10px;
+  }
+  h1{
+    font-size:clamp(28px,4vw,38px);
+    margin:0 0 8px;
+    letter-spacing:-0.02em;
+    line-height:1.15;
+  }
+  p.lede{color:var(--muted);font-size:15.5px;line-height:1.6;max-width:640px;margin:0 0 34px;}
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:24px;
+    margin-bottom:20px;
+  }
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:10px;}
+  select{
+    width:100%;
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:15px;
+    appearance:none;
+  }
+  .results{margin-top:22px;}
+  .result-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px 16px;
+    padding:14px 0;
+    border-top:1px solid var(--line);
+  }
+  .result-row:first-child{border-top:none;}
+  .r-name{font-weight:600;font-size:15px;}
+  .r-meta{color:var(--muted);font-size:12.5px;margin-top:2px;}
+  .bar-track{
+    grid-column:1 / -1;
+    height:6px;background:var(--panel-2);
+    border-radius:4px;overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius:4px;
+    transition:width .5s ease;
+  }
+  .score{font-variant-numeric:tabular-nums;color:var(--accent);font-size:13px;align-self:start;}
+  .stack{
+    display:flex;gap:8px;flex-wrap:wrap;margin-top:26px;
+  }
+  .chip{
+    font-size:12px;color:var(--muted);
+    border:1px solid var(--line);
+    padding:5px 11px;border-radius:20px;
+  }
+  .analytics{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:14px;margin-top:6px;
+  }
+  .stat{
+    background:var(--panel-2);border:1px solid var(--line);
+    border-radius:10px;padding:14px;
+  }
+  .stat .n{font-size:20px;font-weight:700;color:var(--accent-2);}
+  .stat .l{font-size:11.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em;}
+  footer{color:var(--muted);font-size:12.5px;margin-top:30px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Content-Based Filtering · Live in your browser</div>
+  <h1>Product Recommendation Engine</h1>
+  <p class="lede">Pick a product below. The engine scores every other item by description similarity (TF-IDF style term weighting + cosine similarity) and ranks the closest matches — no purchase history involved.</p>
+
+  <div class="panel">
+    <label for="productSelect">Choose a product</label>
+    <select id="productSelect"></select>
+    <div class="results" id="results"></div>
+  </div>
+
+  <div class="panel">
+    <div class="eyebrow" style="margin-bottom:14px;">Catalog Analytics</div>
+    <div class="analytics" id="analytics"></div>
+  </div>
+
+  <div class="stack">
+    <span class="chip">Python (original pipeline)</span>
+    <span class="chip">pandas</span>
+    <span class="chip">scikit-learn</span>
+    <span class="chip">TF-IDF</span>
+    <span class="chip">Cosine Similarity</span>
+  </div>
+
+  <footer>Same logic as the Python implementation, reproduced in JavaScript for an in-browser demo.</footer>
+</div>
+
+<script>
+const catalog = [
+  {name:"Wireless Bluetooth Headphones", category:"Audio", price:59, rating:4.5, description:"wireless bluetooth headphones with long battery life for music and calls"},
+  {name:"Noise Cancelling Earbuds", category:"Audio", price:45, rating:4.3, description:"compact noise cancelling earbuds for workouts and commuting"},
+  {name:"Over-Ear Studio Headphones", category:"Audio", price:89, rating:4.7, description:"over-ear studio headphones for professional audio monitoring"},
+  {name:"Running Shoes - Lightweight", category:"Footwear", price:65, rating:4.2, description:"lightweight running shoes with breathable mesh for daily runs"},
+  {name:"Trail Running Shoes", category:"Footwear", price:72, rating:4.4, description:"durable trail running shoes with grip sole for outdoor terrain"},
+  {name:"Casual Sneakers", category:"Footwear", price:40, rating:4.0, description:"casual everyday sneakers with cushioned comfort sole"},
+  {name:"Stainless Steel Water Bottle", category:"Drinkware", price:22, rating:4.6, description:"stainless steel insulated water bottle keeps drinks cold for hours"},
+  {name:"Insulated Travel Mug", category:"Drinkware", price:28, rating:4.1, description:"insulated travel mug keeps coffee hot during commute"},
+  {name:"Glass Water Bottle", category:"Drinkware", price:18, rating:4.3, description:"eco friendly glass water bottle with silicone sleeve"},
+  {name:"Yoga Mat - Non Slip", category:"Fitness", price:25, rating:4.5, description:"non slip yoga mat for home workouts and stretching"},
+  {name:"Resistance Bands Set", category:"Fitness", price:20, rating:4.2, description:"resistance bands set for strength training and mobility"},
+  {name:"Adjustable Dumbbells", category:"Fitness", price:95, rating:4.6, description:"adjustable dumbbells for home gym strength workouts"},
+  {name:"Smart Fitness Watch", category:"Wearables", price:129, rating:4.4, description:"smart fitness watch tracks heart rate steps and workouts"},
+  {name:"Basic Fitness Tracker", category:"Wearables", price:35, rating:3.9, description:"basic fitness tracker for step count and sleep tracking"},
+  {name:"GPS Running Watch", category:"Wearables", price:149, rating:4.7, description:"gps running watch tracks pace distance and route for runners"},
+  {name:"Organic Green Tea", category:"Beverages", price:12, rating:4.3, description:"organic green tea bags rich in antioxidants"},
+  {name:"Herbal Detox Tea", category:"Beverages", price:14, rating:4.1, description:"herbal detox tea blend for daily wellness routine"},
+  {name:"Cold Brew Coffee Bags", category:"Beverages", price:16, rating:4.4, description:"cold brew coffee bags for smooth iced coffee at home"},
+  {name:"Backpack - Laptop Compartment", category:"Bags", price:55, rating:4.5, description:"backpack with padded laptop compartment for commuting to work"},
+  {name:"Travel Duffel Bag", category:"Bags", price:48, rating:4.2, description:"spacious travel duffel bag for weekend trips and gym"},
+];
+
+// --- Simple TF-IDF + cosine similarity in JS ---
+function tokenize(text){ return text.toLowerCase().split(/\W+/).filter(Boolean); }
+
+const docsTokens = catalog.map(p => tokenize(p.description));
+const vocab = [...new Set(docsTokens.flat())];
+
+function termFreq(tokens){
+  const tf = {};
+  tokens.forEach(t => tf[t] = (tf[t]||0)+1);
+  return tf;
+}
+const df = {};
+vocab.forEach(term => {
+  df[term] = docsTokens.filter(tokens => tokens.includes(term)).length;
+});
+const N = docsTokens.length;
+
+function vectorize(tokens){
+  const tf = termFreq(tokens);
+  return vocab.map(term => {
+    const tfVal = tf[term] || 0;
+    const idf = Math.log((N+1)/((df[term]||0)+1)) + 1;
+    return tfVal * idf;
+  });
+}
+const vectors = docsTokens.map(vectorize);
+
+function cosine(a,b){
+  let dot=0, magA=0, magB=0;
+  for(let i=0;i<a.length;i++){ dot += a[i]*b[i]; magA += a[i]*a[i]; magB += b[i]*b[i]; }
+  if(magA===0 || magB===0) return 0;
+  return dot / (Math.sqrt(magA)*Math.sqrt(magB));
+}
+
+function recommend(index, topN=3){
+  const scores = vectors.map((v,i) => ({i, score: i===index ? -1 : cosine(vectors[index], v)}));
+  scores.sort((a,b)=>b.score-a.score);
+  return scores.slice(0,topN).map(s => ({...catalog[s.i], score:s.score}));
+}
+
+// --- UI ---
+const select = document.getElementById('productSelect');
+catalog.forEach((p,i) => {
+  const opt = document.createElement('option');
+  opt.value = i; opt.textContent = p.name;
+  select.appendChild(opt);
+});
+select.value = catalog.findIndex(p => p.name === "GPS Running Watch");
+
+function render(){
+  const idx = parseInt(select.value);
+  const recs = recommend(idx, 3);
+  const maxScore = Math.max(...recs.map(r=>r.score), 0.01);
+  const resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = recs.map(r => `
+    <div class="result-row">
+      <div>
+        <div class="r-name">${r.name}</div>
+        <div class="r-meta">${r.category} · Rating ${r.rating.toFixed(1)}</div>
+      </div>
+      <div class="score">${r.score.toFixed(3)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(r.score/maxScore*100).toFixed(0)}%"></div></div>
+    </div>
+  `).join('');
+}
+select.addEventListener('change', render);
+render();
+
+// --- Analytics ---
+const byCat = {};
+catalog.forEach(p => {
+  if(!byCat[p.category]) byCat[p.category] = {sum:0,count:0,ratingSum:0};
+  byCat[p.category].sum += p.price;
+  byCat[p.category].count += 1;
+  byCat[p.category].ratingSum += p.rating;
+});
+const analyticsEl = document.getElementById('analytics');
+analyticsEl.innerHTML = Object.entries(byCat).map(([cat,d]) => `
+  <div class="stat">
+    <div class="n">₹${Math.round(d.sum/d.count)}</div>
+    <div class="l">${cat} · avg rating ${(d.ratingSum/d.count).toFixed(1)}</div>
+  </div>
+`).join('');
+</script>
+</body>
+</html>
