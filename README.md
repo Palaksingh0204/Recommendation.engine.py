@@ -2,7 +2,7 @@
 
 A content-based product recommendation system built with Python, pandas, and scikit-learn. Suggests similar products from a catalog using TF-IDF vectorization and cosine similarity — the same core idea behind "customers also viewed" features on e-commerce platforms.
 
-**[Live Demo](#)** ← replace with your GitHub Pages link once deployed
+**[Live Demo](https://palaksingh0204.github.io/Recommendation.engine.py/)** ← replace with your GitHub Pages link once deployed
 
 ## Problem
 
